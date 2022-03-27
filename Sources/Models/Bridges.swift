@@ -5,13 +5,13 @@ import Foundation
 import FoundationExtensions
 import Helper
 
-public typealias PackageRepository = (package: ResolvedPackage, repository: GitHubRepository)
-public typealias PackageLicense = (package: ResolvedPackage, license: GitHubLicense)
+public typealias PackageRepository = (package: ResolvedPackageV2, repository: GitHubRepository)
+public typealias PackageLicense = (package: ResolvedPackageV2, license: GitHubLicense)
 
-public func extractPackageGitHubRepositories(from spmFile: ResolvedPackageContent) -> [PackageRepository] {
-    spmFile.object.pins.compactMap { spmPackage in
-        guard let repository = githubRepository(from: spmPackage.repositoryURL).value else {
-            print("Ignoring project \(spmPackage.package) because we don't know how to fetch the license from it")
+public func extractPackageGitHubRepositories(from spmFile: ResolvedPackageContentV2) -> [PackageRepository] {
+    spmFile.pins.compactMap { spmPackage in
+        guard let repository = githubRepository(from: spmPackage.location).value else {
+            print("Ignoring project \(spmPackage.identity) because we don't know how to fetch the license from it")
             return nil
         }
 
@@ -46,7 +46,7 @@ public func cocoaPodsModel(packageLicenses: [PackageLicense]) -> Reader<Request,
                 downloadGitHubLicenseFile(url: packageLicense.license.downloadUrl)
                     .inject(requester)
                     .map { footerText in
-                        CocoaPodsPlist.Item(title: packageLicense.package.package, license: packageLicense.license.licenseName, footerText: footerText)
+                        CocoaPodsPlist.Item(title: packageLicense.package.identity, license: packageLicense.license.licenseName, footerText: footerText)
                     }
             }
         )

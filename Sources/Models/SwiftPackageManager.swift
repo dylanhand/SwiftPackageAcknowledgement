@@ -4,49 +4,87 @@ import Foundation
 import FoundationExtensions
 import Helper
 
-public struct ResolvedPackageContent: Decodable {
-    let object: ResolvedPackageObject
+// MARK: V2
+
+public struct ResolvedPackageContentV2: Decodable {
+    let pins: [ResolvedPackageV2]
     let version: Int
-    
-    public init(object: ResolvedPackageObject, version: Int) {
-        self.object = object
+
+    public init(pins: [ResolvedPackageV2], version: Int) {
+        self.pins = pins
         self.version = version
     }
 }
 
-public extension ResolvedPackageContent {
-    func ignoring(packages ignore: [String]) -> ResolvedPackageContent {
+public struct ResolvedPackageV2: Decodable {
+    let identity: String
+    let location: URL
+    let state: ResolvedPackageState
+
+    public init(identity: String, location: URL, state: ResolvedPackageState) {
+        self.identity = identity
+        self.location = location
+        self.state = state
+    }
+}
+
+public extension ResolvedPackageContentV2 {
+    func ignoring(packages ignore: [String]) -> ResolvedPackageContentV2 {
         if ignore.count == 0 { return self }
-        return ResolvedPackageContent(
-            object: ResolvedPackageObject(
-                pins: object.pins.filter { pin in
-                    !ignore.contains(pin.package)
-                }
-            ),
+        return ResolvedPackageContentV2(
+                pins: pins.filter { pin in
+                    !ignore.contains(pin.identity)
+                },
             version: version
         )
     }
 }
 
-public struct ResolvedPackageObject: Decodable {
-    let pins: [ResolvedPackage]
+// MARK: V1
 
-    public init(pins: [ResolvedPackage]) {
-        self.pins = pins
-    }
-}
-
-public struct ResolvedPackage: Decodable {
-    let package: String
-    let repositoryURL: URL
-    let state: ResolvedPackageState
+// public struct ResolvedPackageContent: Decodable {
+//     let object: ResolvedPackageObject
+//     let version: Int
     
-    public init(package: String, repositoryURL: URL, state: ResolvedPackageState) {
-        self.package = package
-        self.repositoryURL = repositoryURL
-        self.state = state
-    }
-}
+//     public init(object: ResolvedPackageObject, version: Int) {
+//         self.object = object
+//         self.version = version
+//     }
+// }
+
+// public extension ResolvedPackageContent {
+//     func ignoring(packages ignore: [String]) -> ResolvedPackageContent {
+//         if ignore.count == 0 { return self }
+//         return ResolvedPackageContent(
+//             object: ResolvedPackageObject(
+//                 pins: object.pins.filter { pin in
+//                     !ignore.contains(pin.package)
+//                 }
+//             ),
+//             version: version
+//         )
+//     }
+// }
+
+// public struct ResolvedPackageObject: Decodable {
+//     let pins: [ResolvedPackage]
+
+//     public init(pins: [ResolvedPackage]) {
+//         self.pins = pins
+//     }
+// }
+
+// public struct ResolvedPackage: Decodable {
+//     let package: String
+//     let repositoryURL: URL
+//     let state: ResolvedPackageState
+    
+//     public init(package: String, repositoryURL: URL, state: ResolvedPackageState) {
+//         self.package = package
+//         self.repositoryURL = repositoryURL
+//         self.state = state
+//     }
+// }
 
 public struct ResolvedPackageState: Decodable {
     let branch: String?
@@ -84,7 +122,7 @@ public func packageResolvedFile(from workspacePath: String) -> Reader<PathExists
     }
 }
 
-public func readSwiftPackageResolvedJson(url: URL) -> Reader<Decoder<ResolvedPackageContent>, Result<ResolvedPackageContent, GeneratePlistError>> {
+public func readSwiftPackageResolvedJson(url: URL) -> Reader<Decoder<ResolvedPackageContentV2>, Result<ResolvedPackageContentV2, GeneratePlistError>> {
     Reader { decoder in
         Result { try Data(contentsOf: url) }
             .mapError(GeneratePlistError.swiftPackageCannotBeOpen)
